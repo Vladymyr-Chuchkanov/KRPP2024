@@ -82,7 +82,7 @@ class DatabaseController:
         query = self.session.query(Account).filter_by(email=email).all()
         if len(query) == 0:
             return "wrong email!", None
-        return self.OK, query
+        return self.OK, query[0]
 
     def delete_account(self, acc_id):
         try:
