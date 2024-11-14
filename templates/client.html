@@ -26,21 +26,21 @@
 <div id="messages"></div>
 
 <script>
-    const socket = io("http://localhost:5000");
+    const socket = io("http://localhost:5000", {
+        query: { token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF9hY2NvdW50Ijo1LCJlbWFpbCI6Im1ydWRpa2N0QGV4YW1wbGUuY29tIiwibmlja25hbWUiOiJtcnVkaWtjIiwiZXhwIjoxNzMxNjE3MTA5fQ.1umn6l6aMz5UpL--yp8mboQbJRH2E0AHocA4PGr-L3k"}
+    });
 
     function joinChat() {
-        const username = document.getElementById('username').value;
         const chat_id = document.getElementById('chat_id').value;
-        console.log(`Joining chat with username: ${username}, chat_id: ${chat_id}`);
-        socket.emit('join_chat', {username, chat_id});
+        console.log(`Joining chat with username: , chat_id: ${chat_id}`);
+        socket.emit('join_chat', {chat_id});
     }
 
     function sendMessage() {
-        const username = document.getElementById('username').value;
         const chat_id = document.getElementById('chat_id').value;
         const message = document.getElementById('message').value;
         console.log(`Sending message: ${message}`);
-        socket.emit('send_message', {username, chat_id, message});
+        socket.emit('send_message', {chat_id, message});
     }
 
     // Handle receiving messages from the server
