@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebChat Client</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Include Socket.IO client -->
+    <script src="https://cdn.socket.io/3.1.3/socket.io.min.js">
+{#            integrity="sha384-ZXY8ZwT3qD3Pf5rXcw9rGOb4H+6eIBuFFduf4iQp02BOYfT+6hHZgKycmtbJZClp"#}
+{#            crossorigin="anonymous">#}
+
+    </script>
+    <style>
+        /* Simple styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #login-form, #chat-container, #chat-room {
+            display: none;
+        }
+        #chat-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        #chat-list li {
+            padding: 5px;
+            cursor: pointer;
+            background-color: #f2f2f2;
+            margin-bottom: 5px;
+        }
+        #chat-list li:hover {
+            background-color: #e0e0e0;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            height: 300px;
+            overflow-y: scroll;
+            padding: 10px;
+        }
+        #message-form {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="login-form">
+    <h2>Login</h2>
+    <form id="form-login">
+        <label>Email:</label><br>
+        <input type="email" id="email" required><br><br>
+        <label>Password:</label><br>
+        <input type="password" id="password" required><br><br>
+        <button type="submit">Login</button>
+    </form>
+    <p>Don't have an account? <a href="#" id="show-register">Register here</a></p>
+</div>
+
+<div id="register-form">
+    <h2>Register</h2>
+    <form id="form-register">
+        <label>Email:</label><br>
+        <input type="email" id="reg-email" required><br><br>
+        <label>Password:</label><br>
+        <input type="password" id="reg-password" required><br><br>
+        <label>Nickname:</label><br>
+        <input type="text" id="reg-nickname" required><br><br>
+        <button type="submit">Register</button>
+    </form>
+    <p>Already have an account? <a href="#" id="show-login">Login here</a></p>
+</div>
+
+<div id="chat-container">
+    <h2>Welcome, <span id="user-nickname"></span></h2>
+    <button id="logout-btn">Logout</button>
+    <h3>Available Chats</h3>
+    <ul id="chat-list"></ul>
+    <form id="create-chat-form">
+        <input type="text" id="new-chat-name" placeholder="New chat name">
+        <button type="submit">Create Chat</button>
+    </form>
+</div>
+
+<div id="chat-room">
+    <h3>Chat: <span id="chat-name"></span></h3>
+    <button id="back-to-chats">Back to Chats</button>
+    <div id="messages"></div>
+    <form id="message-form">
+        <input type="text" id="message-input" placeholder="Type your message">
+        <button type="submit">Send</button>
+    </form>
+</div>
+
+<script>
+    $(document).ready(function(){
+        var token = null;
+        var socket = null;
+        var currentChatId = null;
+
+        function showLogin() {
+            $('#login-form').show();
+            $('#register-form').hide();
+            $('#chat-container').hide();
+            $('#chat-room').hide();
+        }
+
+        function showRegister() {
+            $('#login-form').hide();
+            $('#register-form').show();
+            $('#chat-container').hide();
+            $('#chat-room').hide();
+        }
+
+        function showChatContainer() {
+            $('#login-form').hide();
+            $('#register-form').hide();
+            $('#chat-container').show();
+            $('#chat-room').hide();
+        }
+
+        function showChatRoom() {
+            $('#login-form').hide();
+            $('#register-form').hide();
+            $('#chat-container').hide();
+            $('#chat-room').show();
+        }
+
+        function loadChats() {
+            $.ajax({
+                url: '/api/chats',
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function(response) {
+                    $('#chat-list').empty();
+                    response.chats.forEach(function(chat){
+                        $('#chat-list').append('<li data-chat-id="'+chat.id_chat+'">'+chat.name+'</li>');
+                    });
+                },
+                error: function(err) {
+                    console.error(err);
+                }
+            });
+        }
+
+        function connectSocket() {
+            socket = io({
+                query: {
+                    token: token
+                }
+            });
+
+            socket.on('connect', function() {
+                console.log('Connected to Socket.IO server');
+            });
+
+            socket.on('receive_message', function(data) {
+                console.log('Received message:', data);
+                $('#messages').append('<div><strong>'+data.username+':</strong> '+data.message+'</div>');
+            });
+
+            socket.on('user_joined', function(data) {
+                $('#messages').append('<div><em>'+data.username+' joined the chat.</em></div>');
+            });
+
+            socket.on('user_left', function(data) {
+                $('#messages').append('<div><em>'+data.username+' left the chat.</em></div>');
+            });
+
+            socket.on('disconnect', function() {
+                console.log('Disconnected from Socket.IO server');
+            });
+        }
+
+        function joinChat(chat_id, chat_name) {
+            currentChatId = chat_id;
+            $('#chat-name').text(chat_name);
+            $('#messages').empty();
+            showChatRoom();
+
+            // Get previous messages
+            $.ajax({
+                url: '/api/chats/' + chat_id + '/messages',
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function(response) {
+                    response.messages.forEach(function(message){
+                        $('#messages').append('<div>'+message.sent_time+' --- <strong>'+message.account.nickname+':</strong> '+message.text+'</div>');
+                    });
+                },
+                error: function(err) {
+                    console.error(err);
+                }
+            });
+
+            // Join the chat room
+            socket.emit('join_chat', { 'chat_id': chat_id });
+        }
+
+        function leaveChat() {
+            if (currentChatId) {
+                socket.emit('leave_chat', { 'chat_id': currentChatId });
+                currentChatId = null;
+            }
+        }
+
+        // Event handlers
+
+        $('#form-login').submit(function(e){
+            e.preventDefault();
+            var email = $('#email').val();
+            var password = $('#password').val();
+            $.ajax({
+                url: '/api/login',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    'email': email,
+                    'password': password
+                }),
+                success: function(response) {
+                    token = response.token;
+                    var decoded = parseJwt(token);
+                    $('#user-nickname').text(decoded.nickname);
+                    showChatContainer();
+                    loadChats();
+                    connectSocket();
+                },
+                error: function(err) {
+                    console.error(err);
+                    alert('Login failed');
+                }
+            });
+        });
+
+        $('#form-register').submit(function(e){
+            e.preventDefault();
+            var email = $('#reg-email').val();
+            var password = $('#reg-password').val();
+            var nickname = $('#reg-nickname').val();
+            $.ajax({
+                url: '/api/register',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    'email': email,
+                    'password': password,
+                    'nickname': nickname
+                }),
+                success: function(response) {
+                    alert('Registration successful! Please login.');
+                    showLogin();
+                },
+                error: function(err) {
+                    console.error(err);
+                    alert('Registration failed');
+                }
+            });
+        });
+
+        $('#show-register').click(function(e){
+            e.preventDefault();
+            showRegister();
+        });
+
+        $('#show-login').click(function(e){
+            e.preventDefault();
+            showLogin();
+        });
+
+        $('#logout-btn').click(function(){
+            if (socket) {
+                socket.disconnect();
+            }
+            token = null;
+            showLogin();
+        });
+
+        $('#chat-list').on('click', 'li', function(){
+            var chat_id = $(this).data('chat-id');
+            var chat_name = $(this).text();
+            joinChat(chat_id, chat_name);
+        });
+
+        $('#back-to-chats').click(function(){
+            leaveChat();
+            showChatContainer();
+        });
+
+        $('#message-form').submit(function(e){
+            e.preventDefault();
+            var message = $('#message-input').val();
+            if (message.trim() !== '') {
+                socket.emit('send_message', {
+                    'chat_id': currentChatId,
+                    'message': message
+                });
+                $('#message-input').val('');
+            }
+        });
+
+        $('#create-chat-form').submit(function(e){
+            e.preventDefault();
+            var chatName = $('#new-chat-name').val();
+            if (chatName.trim() !== '') {
+                $.ajax({
+                    url: '/api/chats',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    data: JSON.stringify({
+                        'name': chatName
+                    }),
+                    success: function(response) {
+                        $('#new-chat-name').val('');
+                        loadChats();
+                    },
+                    error: function(err) {
+                        console.error(err);
+                    }
+                });
+            }
+        });
+
+        function parseJwt(token) {
+            var base64Url = token.split('.')[1];
+            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        };
+
+        // Show login form on page load
+        showLogin();
+    });
+</script>
+
+</body>
+</html>
