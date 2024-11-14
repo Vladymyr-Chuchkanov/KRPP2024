@@ -10,7 +10,7 @@ class Account(Base):
 
     id_account = Column(Integer, primary_key=True)
     email = Column(String(100), nullable=False)
-    password = Column(String(50), nullable=False)
+    password = Column(String, nullable=False)
     nickname = Column(String(100), nullable=False)
     user_photo = Column(String(255), nullable=True)
 
@@ -79,8 +79,8 @@ class DatabaseController:
         return self.OK, query
 
     def get_account_by_email(self, email):
-        query = self.session.query(Account).filter_by(email=email).all()
-        if len(query) == 0:
+        query = self.session.query(Account).filter_by(email=email).first()
+        if query:
             return "wrong email!", None
         return self.OK, query
 
@@ -198,7 +198,7 @@ class DatabaseController:
     def get_messages(self, chat_id, offset, limit):
         try:
             messages = (self.session.query(Message)
-                        .filter(Message.chat_id == chat_id)
+                        .filter(Message.chat_id == chat_id, Message.deleted == 0)
                         .order_by(desc(Message.sent_time))
                         .offset(offset)
                         .limit(limit)
@@ -210,7 +210,7 @@ class DatabaseController:
 
 
 #connection
-db_server = '2.tcp.eu.ngrok.io,10780'
+db_server = '6.tcp.eu.ngrok.io,10417'
 db_database = 'KRPP2024'
 db_username = 'admin'
 db_password = '123Ad{*miN'
