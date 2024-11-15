@@ -53,4 +53,6 @@ jobs:
           cd front
           nohup serve -s dist &
 
+          exit 0
+
         EOF
