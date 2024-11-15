@@ -3,6 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 from sqlalchemy import desc
 
+from app_logger import logger
 
 Base = declarative_base()
 class Account(Base):
@@ -79,10 +80,10 @@ class DatabaseController:
         return self.OK, query
 
     def get_account_by_email(self, email):
-        query = self.session.query(Account).filter_by(email=email).first()
-        if query:
-            return "wrong email!", None
-        return self.OK, query[0]
+        account = self.session.query(Account).filter_by(email=email).first()
+        if not account:
+            return "couldn't find an account by email", None
+        return self.OK, account
 
     def delete_account(self, acc_id):
         try:
@@ -104,6 +105,7 @@ class DatabaseController:
             self.session.commit()
             return self.OK, new_chat
         except Exception as e:
+            self.session.rollback()
             return e, None
 
     def add_account_to_chat(self, acc_id, chat_id):
@@ -142,6 +144,16 @@ class DatabaseController:
             self.session.rollback()
             return e, None
 
+    def get_chats(self, offset=0, limit=10):
+        try:
+            query = self.session.query(Chat).order_by(desc(Chat.creation_date))
+            total = query.count()
+            chats = query.offset(offset * limit).limit(limit).all()
+            return self.OK, chats, total
+        except Exception as e:
+            return e, None, None
+
+
     def get_account_chat_list(self, acc_id):
         acc_chats = ((self.session.query(Chat.id_chat, Chat.name, Chat.creation_date)
                      .join(Account_Chat, Account_Chat.chat_id == Chat.id_chat))
@@ -161,7 +173,7 @@ class DatabaseController:
             self.session.rollback()
             return e, None
 
-    def add_message(self, acc_id, chat_id, text, filename):
+    def add_message(self, acc_id, chat_id, text, filename=None):
         new_message = Message(account_id=acc_id, chat_id=chat_id, text=text, filename=filename
                               , sent_time=datetime.now())
         try:
@@ -169,6 +181,7 @@ class DatabaseController:
             self.session.commit()
             return self.OK, new_message
         except Exception as e:
+            logger.error(e)
             self.session.rollback()
             return e, None
 
@@ -195,17 +208,24 @@ class DatabaseController:
             self.session.rollback()
             return e, None
 
-    def get_messages(self, chat_id, offset, limit):
+    def get_messages(self, chat_id, offset=0, limit=10):
         try:
-            messages = (self.session.query(Message)
-                        .filter(Message.chat_id == chat_id, Message.deleted == 0)
-                        .order_by(desc(Message.sent_time))
-                        .offset(offset)
-                        .limit(limit)
-                        .all())
-            return messages, None
+            messages = (
+                self.session.query(Message, Account)
+                .join(Account, Message.account_id == Account.id_account)
+                .filter(Message.chat_id == chat_id, Message.deleted == 0)
+                .order_by(desc(Message.sent_time))
+                .offset(offset)
+                .limit(limit)
+                .all()
+            )
+            total = (
+                self.session.query(Message).filter(Message.chat_id == chat_id).count()
+            )
+
+            return self.OK, messages, total
         except Exception as e:
-            return None, e
+            return e, None
 
 
 

@@ -3,10 +3,12 @@ from dataclasses import dataclass
 from functools import wraps
 
 import jwt
-from flask import request, jsonify, Blueprint
+from flask import request, jsonify, Blueprint, session
+from flask_socketio import disconnect
+from werkzeug.security import generate_password_hash, check_password_hash
 
-from app import app
 from dbconnect import dbc1
+from app_logger import logger
 
 JWT_SECRET_KEY = "Bweh5EeGh3eip9ohBweh5EeGh3eip9ohBweh5EeGh3eip9ohBweh5EeGh3eip9ohBweh5EeGh3eip9ohBweh5EeGh3eip9ohBweh5EeGh3eip9ohBweh5EeGh3eip9ohBweh5EeGh3eip9ohBweh5EeGh3eip9oh"
 
@@ -17,6 +19,7 @@ authentication_blueprint = Blueprint("authentication", __name__)
 class UserIdentity:
     account_id: int
     email: str
+    nickname: str
 
 
 @authentication_blueprint.route("/api/register", methods=["POST"])
@@ -27,8 +30,8 @@ def register():
     nickname = data.get("nickname")
     user_photo = data.get("user_photo", "")
 
-    # hashed_password = generate_password_hash(password)
-    hashed_password = password  # Skip hashing
+    hashed_password = generate_password_hash(password)
+    # hashed_password = password  # Skip hashing
 
     result, account = dbc1.add_account(email, hashed_password, nickname, user_photo)
     if result == dbc1.OK:
@@ -40,10 +43,10 @@ def register():
                 "user_photo": account.user_photo,
             }
         }
-        app.logger.info(f"User {account.email} registered")
+        logger.info(f"User {account.email} registered")
         return jsonify(response), 201
     else:
-        app.logger.error()
+        logger.error("Error registering user")
         return jsonify({"error": str(result)}), 400
 
 
@@ -54,12 +57,13 @@ def login():
     password = data.get("password")
 
     result, account = dbc1.get_account_by_email(email)
-    # if result == dbc1.OK and check_password_hash(account.password, password):
-    if result == dbc1.OK and password == account.password:
+    if result == dbc1.OK and check_password_hash(account.password, password):
+        # if result == dbc1.OK and password == account.password:
         token = jwt.encode(
             {
                 "id_account": account.id_account,
                 "email": account.email,
+                "nickname": account.nickname,
                 "exp": datetime.datetime.now(datetime.UTC)
                 + datetime.timedelta(hours=1),
             },
@@ -92,10 +96,38 @@ def jwt_required(f):
     return decorated_function
 
 
+def socket_auth(f):
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        username = session.get("email")
+        if not username:
+            logger.error("No token")
+            disconnect()
+            raise Exception("User not authenticated")
+        return f(*args, **kwargs)
+
+    return wrapped
+
+
 def extract_identity_from_request() -> UserIdentity | None:
-    auth_header = request.headers.get("Authorization")
-    token = auth_header.split(" ")[1]
-    decoded_token = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-    return UserIdentity(
-        account_id=decoded_token["id_account"], email=decoded_token["email"]
-    )
+    if request.headers.get("Authorization"):
+        auth_header = request.headers.get("Authorization")
+        token = auth_header.split(" ")[1]
+        decoded_token = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        return UserIdentity(
+            account_id=decoded_token["id_account"],
+            email=decoded_token["email"],
+            nickname=decoded_token["nickname"],
+        )
+    elif session.get("email"):
+        return UserIdentity(
+            account_id=session.get("id_account"),
+            email=session.get("email"),
+            nickname=session.get("nickname"),
+        )
+    else:
+        raise Exception("User not authenticated")
+
+
+def get_payload_from_token(token: str) -> dict:
+    return jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
