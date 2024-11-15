@@ -43,5 +43,5 @@ jobs:
           nohup python3 app.py &  
           
           cd front
-          nohup npm run start & 
+          nohup npm start & 
         EOF
