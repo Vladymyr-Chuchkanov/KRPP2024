@@ -1,6 +1,7 @@
 import datetime
 from dataclasses import dataclass
 from functools import wraps
+from typing import Optional
 
 import jwt
 from flask import request, jsonify, Blueprint, session
@@ -109,7 +110,7 @@ def socket_auth(f):
     return wrapped
 
 
-def extract_identity_from_request() -> UserIdentity | None:
+def extract_identity_from_request() -> Optional[UserIdentity]:
     if request.headers.get("Authorization"):
         auth_header = request.headers.get("Authorization")
         token = auth_header.split(" ")[1]
