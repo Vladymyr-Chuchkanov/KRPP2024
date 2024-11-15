@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - 'front/**'
+      - '**'
 
 jobs:
   deploy:
