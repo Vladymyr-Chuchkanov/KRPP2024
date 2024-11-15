@@ -27,8 +27,7 @@ jobs:
     - name: SSH into server and deploy
       run: |
         ssh -o StrictHostKeyChecking=no root@185.206.215.65 << 'EOF'
-
-          echo "Stopping main and submodule processes..."
+        
           pkill -f 'python3 app.py' || true  
           pkill -f 'npm run' || true         
 
@@ -46,10 +45,12 @@ jobs:
 
           cd front
           npm install || true 
+          npm run build || true
 
           cd ..
           nohup python3 app.py &  
           
           cd front
-          nohup npm start & 
+          nohup serve -s build &
+
         EOF
