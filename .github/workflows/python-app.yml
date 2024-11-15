@@ -25,7 +25,7 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no root@185.206.215.65 << 'EOF'
 
-          echo "Stopping main and submodule processes..."
+          echo "Stopping main and submodule processes.."
           pkill -f 'python3 app.py' || true  
           pkill -f 'npm run' || true         
 
