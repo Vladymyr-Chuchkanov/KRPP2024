@@ -29,7 +29,7 @@ jobs:
           pkill -f 'python3 app.py' || true  
           pkill -f 'npm run' || true         
 
-          cd KRPP2024/KRPP2024back
+          cd KRPP/KRPP2024back
           
           git pull origin main
           git submodule update --init --recursive
