@@ -34,15 +34,14 @@ jobs:
           git pull origin main
           git submodule update --init --recursive
 
-          pip install -r requirements.txt || true 
+          pip3 install -r requirements.txt || true 
 
-          cd /front
+          cd front
           npm install || true 
 
-          # Запуск мейн репозитория
           cd ..
           nohup python3 app.py &  
           
-          cd /front
+          cd front
           nohup npm run start & 
         EOF
