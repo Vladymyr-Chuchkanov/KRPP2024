@@ -29,29 +29,13 @@ jobs:
         ssh -o StrictHostKeyChecking=no root@185.206.215.65 << 'EOF'
         
           pkill -f 'python3 app.py' || true  
-          pkill -f 'npm run' || true         
-
+          
           cd KRPP/KRPP2024back
           
           git pull origin main
-          
-          cd front
-          git checkout -- .
-
-          cd ..
-          git submodule update --init --recursive
-
           pip3 install -r requirements.txt || true 
 
-          cd front
-          npm install || true 
-          npm run build || true
-
-          cd ..
           nohup python3 app.py &  
-          
-          cd front
-          nohup serve -s dist &
 
           cd ..
           exit
