@@ -39,7 +39,5 @@ def handle_connect():
         return False  # Reject connection
 
 
-from sockets import chats
-
 if __name__ == "__main__":
     socketio.run(app, debug=True)

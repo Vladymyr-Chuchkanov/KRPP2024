@@ -4,4 +4,6 @@ eventlet
 sqlalchemy
 pyodbc
 pyjwt
+pytest
+pytest-mock
 
