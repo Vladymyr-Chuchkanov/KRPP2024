@@ -6,7 +6,9 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - main 
+      - main
+    paths:
+      - 'front/**'
 
 jobs:
   deploy:
