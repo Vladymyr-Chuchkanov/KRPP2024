@@ -51,6 +51,6 @@ jobs:
           nohup python3 app.py &  
           
           cd front
-          nohup serve -s build &
+          nohup serve -s dist &
 
         EOF
