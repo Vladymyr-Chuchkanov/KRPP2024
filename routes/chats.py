@@ -1,9 +1,6 @@
 from flask import Blueprint, request, jsonify
 from dbconnect import dbc1  # Assuming dbc1 is your DatabaseController instance
-from routes.authentication import (
-    jwt_required,
-    extract_identity_from_request,
-)
+from routes.authentication import jwt_required, extract_identity_from_request
 
 chats_blueprint = Blueprint("chats", __name__)
 
@@ -13,7 +10,7 @@ def get_chats():
     page = request.args.get("page", 1, type=int)
     size = request.args.get("size", 10, type=int)
 
-    res, chats, total_size = dbc1.get_chats(page, size)
+    res, chats, total_size = dbc1.get_chats(page-1, size)
 
     if res == dbc1.OK:
         chat_list = [
@@ -60,7 +57,7 @@ def get_chat_messages(chat_id):
     size = request.args.get("size", 10, type=int)
     # chat_id = request.view_args["chat_id"]
 
-    res, messages, total = dbc1.get_messages(chat_id, page, size)
+    res, messages, total = dbc1.get_messages(chat_id, page-1, size)
 
     if res == dbc1.OK:
         message_list = [

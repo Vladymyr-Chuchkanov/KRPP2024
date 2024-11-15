@@ -144,11 +144,11 @@ class DatabaseController:
             self.session.rollback()
             return e, None
 
-    def get_chats(self, page=1, size=10):
+    def get_chats(self, offset=0, limit=10):
         try:
             query = self.session.query(Chat).order_by(desc(Chat.creation_date))
             total = query.count()
-            chats = query.offset((page - 1) * size).limit(size).all()
+            chats = query.offset(offset * limit).limit(limit).all()
             return self.OK, chats, total
         except Exception as e:
             return e, None, None
@@ -208,7 +208,7 @@ class DatabaseController:
             self.session.rollback()
             return e, None
 
-    def get_messages(self, chat_id, offset, limit):
+    def get_messages(self, chat_id, offset=0, limit=10):
         try:
             messages = (
                 self.session.query(Message, Account)
