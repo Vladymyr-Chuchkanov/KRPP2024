@@ -35,6 +35,12 @@ jobs:
           cd KRPP/KRPP2024back
           
           git pull origin main
+          
+          cd front
+          git checkout -- .
+
+          cd ..
+          git submodule update --init --recursive
 
           pip3 install -r requirements.txt || true 
 
