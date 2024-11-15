@@ -7,9 +7,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'front/**'
-      - '**'
 
 jobs:
   deploy:
@@ -35,9 +32,7 @@ jobs:
           git pull origin main
           pip3 install -r requirements.txt || true 
 
-          nohup python3 app.py &  
-
-          cd ..
+          nohup python3 app.py > backend.log 2>&1 &
           exit
 
         EOF
