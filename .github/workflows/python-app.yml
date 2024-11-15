@@ -27,24 +27,33 @@ jobs:
     - name: SSH into server and deploy
       run: |
         ssh -o StrictHostKeyChecking=no root@185.206.215.65 << 'EOF'
-
-          echo "Stopping main and submodule processes.."
+        
           pkill -f 'python3 app.py' || true  
           pkill -f 'npm run' || true         
 
           cd KRPP/KRPP2024back
           
           git pull origin main
+          
+          cd front
+          git checkout -- .
+
+          cd ..
           git submodule update --init --recursive
 
           pip3 install -r requirements.txt || true 
 
           cd front
           npm install || true 
+          npm run build || true
 
           cd ..
           nohup python3 app.py &  
           
           cd front
-          nohup npm start & 
+          nohup serve -s dist &
+
+          cd ..
+          exit
+
         EOF
