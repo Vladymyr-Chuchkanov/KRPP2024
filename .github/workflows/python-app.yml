@@ -1,0 +1,48 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }} 
+
+    - name: SSH into server and deploy
+      run: |
+        ssh -o StrictHostKeyChecking=no root@185.206.215.65 << 'EOF'
+
+          echo "Stopping main and submodule processes..."
+          pkill -f 'python3 app.py' || true  
+          pkill -f 'npm run' || true         
+
+          cd KRPP2024/KRPP2024back
+          
+          git pull origin main
+          git submodule update --init --recursive
+
+          pip install -r requirements.txt || true 
+
+          cd /front
+          npm install || true 
+
+          # Запуск мейн репозитория
+          cd ..
+          nohup python3 app.py &  
+          
+          cd /front
+          nohup npm run start & 
+        EOF
