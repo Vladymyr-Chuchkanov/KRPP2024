@@ -230,7 +230,7 @@ class DatabaseController:
 
 
 #connection
-db_server = '4.tcp.eu.ngrok.io,12558'
+db_server = '6.tcp.eu.ngrok.io,11453'
 db_database = 'KRPP2024'
 db_username = 'admin'
 db_password = '123Ad{*miN'
