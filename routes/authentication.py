@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass
 from functools import wraps
 from typing import Optional
@@ -65,8 +65,8 @@ def login():
                 "id_account": account.id_account,
                 "email": account.email,
                 "nickname": account.nickname,
-                "exp": datetime.datetime.now(datetime.UTC)
-                + datetime.timedelta(hours=1),
+                "exp": datetime.now()
+                + timedelta(hours=1),
             },
             JWT_SECRET_KEY,
             algorithm="HS256",
