@@ -83,5 +83,6 @@ def get_chat_messages(chat_id):
         }
 
         return jsonify(response), 200
+    else:
+        return jsonify({"error": str(res)}), 400
 
-    pass

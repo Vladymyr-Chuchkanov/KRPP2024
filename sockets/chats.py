@@ -50,7 +50,7 @@ def handle_send_message(data):
     message = data["message"]
     logger.info(f"User {user_identity.nickname} sent message to chat {chat_id}")
     logger.info(f"Message: {message}")
-    res, message =  dbc1.add_message(user_identity.account_id, chat_id, message)
+    res, message = dbc1.add_message(user_identity.account_id, chat_id, message)
     if res != dbc1.OK:
         logger.error("Error adding message")
         raise Exception("Error adding message")
