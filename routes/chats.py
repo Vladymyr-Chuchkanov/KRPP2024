@@ -55,7 +55,6 @@ def create_chat():
 def get_chat_messages(chat_id):
     page = request.args.get("page", 1, type=int)
     size = request.args.get("size", 10, type=int)
-    # chat_id = request.view_args["chat_id"]
 
     res, messages, total = dbc1.get_messages(chat_id, page-1, size)
 
