@@ -227,6 +227,15 @@ class DatabaseController:
         except Exception as e:
             return e, None
 
+    def test_connection(self):
+        try:
+            self.engine.connect()
+            print("Connection successful!")
+            return True
+        except Exception as e:
+            print(f"Connection failed: {e}")
+            return False
+
 
 
 #connection
@@ -235,6 +244,10 @@ db_database = 'KRPP2024'
 db_username = 'admin'
 db_password = '123Ad{*miN'
 dbc1 = DatabaseController(db_server, db_database, db_username, db_password)
+if dbc1.test_connection():
+    print("Database is accessible.")
+else:
+    print("Failed to connect to the database.")
 
 #example
 """email = "user1@example.com"
