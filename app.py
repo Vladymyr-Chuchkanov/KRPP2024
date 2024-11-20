@@ -3,6 +3,7 @@ import eventlet
 
 eventlet.monkey_patch()
 from socketio_app import app, socketio
+import sockets.chats  # don't remove this import, it is needed to register socketio events
 
 import jwt
 from flask import render_template, request, session
