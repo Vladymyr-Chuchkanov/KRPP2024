@@ -57,10 +57,10 @@ class DatabaseController:
         self.session.close()
 
     def add_account(self, email, password, nickname, user_photo):
-        new_account = Account(email=email, password=password, nickname=nickname,
-                              user_photo=user_photo)
-        self.session.add(new_account)
         try:
+            new_account = Account(email=email, password=password, nickname=nickname,
+                                  user_photo=user_photo)
+            self.session.add(new_account)
             self.session.commit()
             return self.OK, new_account
         except Exception as e:
@@ -68,22 +68,34 @@ class DatabaseController:
             return e, None
 
     def verify_account(self, email, password):
-        query = self.session.query(Account).filter(Account.email == email, Account.password == password).all()
-        if len(query) == 0:
-            return "wrong login or password!", None
-        return self.OK, query
+        try:
+            query = self.session.query(Account).filter(Account.email == email, Account.password == password).all()
+            if len(query) == 0:
+                return "wrong login or password!", None
+            return self.OK, query
+        except Exception as e:
+            self.session.rollback()
+            return e, None
 
     def get_account_by_id(self, acc_id):
-        query = self.session.query(Account).filter(Account.id_account == acc_id).all()
-        if len(query) == 0:
-            return "wrong account id!", None
-        return self.OK, query
+        try:
+            query = self.session.query(Account).filter(Account.id_account == acc_id).all()
+            if len(query) == 0:
+                return "wrong account id!", None
+            return self.OK, query
+        except Exception as e:
+            self.session.rollback()
+            return e, None
 
     def get_account_by_email(self, email):
-        account = self.session.query(Account).filter_by(email=email).first()
-        if not account:
-            return "couldn't find an account by email", None
-        return self.OK, account
+        try:
+            account = self.session.query(Account).filter_by(email=email).first()
+            if not account:
+                return "couldn't find an account by email", None
+            return self.OK, account
+        except Exception as e:
+            self.session.rollback()
+            return e, None
 
     def delete_account(self, acc_id):
         try:
@@ -109,8 +121,8 @@ class DatabaseController:
             return e, None
 
     def add_account_to_chat(self, acc_id, chat_id):
-        new_account_chat = Account_Chat(account_id=acc_id, chat_id=chat_id)
         try:
+            new_account_chat = Account_Chat(account_id=acc_id, chat_id=chat_id)
             self.session.add(new_account_chat)
             self.session.commit()
             return self.OK, None
@@ -119,9 +131,9 @@ class DatabaseController:
             return e, None
 
     def delete_chat_from_acc(self, acc_id, chat_id):
-        account_chat = (self.session.query(Account_Chat)
-                        .filter(Account_Chat.chat_id == chat_id, Account_Chat.account_id == acc_id)).first()
         try:
+            account_chat = (self.session.query(Account_Chat)
+                            .filter(Account_Chat.chat_id == chat_id, Account_Chat.account_id == acc_id)).first()
             account_chat.deleted = True
             self.session.commit()
 
@@ -131,6 +143,7 @@ class DatabaseController:
                 self._drop_chat_data(chat_id)
             return self.OK, None
         except Exception as e:
+            self.session.rollback()
             return e, None
 
     def _drop_chat_data(self, chat_id):
@@ -151,21 +164,25 @@ class DatabaseController:
             chats = query.offset(offset * limit).limit(limit).all()
             return self.OK, chats, total
         except Exception as e:
+            self.session.rollback()
             return e, None, None
 
-
     def get_account_chat_list(self, acc_id):
-        acc_chats = ((self.session.query(Chat.id_chat, Chat.name, Chat.creation_date)
-                     .join(Account_Chat, Account_Chat.chat_id == Chat.id_chat))
-                     .filter(Account_Chat.account_id == acc_id, Account_Chat.deleted == 0)
-                     .all())
-        if len(acc_chats) == 0:
-            return "account have no chats!", None
-        return self.OK, acc_chats
+        try:
+            acc_chats = ((self.session.query(Chat.id_chat, Chat.name, Chat.creation_date)
+                        .join(Account_Chat, Account_Chat.chat_id == Chat.id_chat))
+                        .filter(Account_Chat.account_id == acc_id, Account_Chat.deleted == 0)
+                        .all())
+            if len(acc_chats) == 0:
+                return "account have no chats!", None
+            return self.OK, acc_chats
+        except Exception as e:
+            self.session.rollback()
+            return e, None
 
     def rename_chat(self, chat_id, chat_name):
-        chat = self.session.query(Chat).filter(Chat.id_chat == chat_id).first()
         try:
+            chat = self.session.query(Chat).filter(Chat.id_chat == chat_id).first()
             chat.name = chat_name
             self.session.commit()
             return self.OK, chat
@@ -174,9 +191,9 @@ class DatabaseController:
             return e, None
 
     def add_message(self, acc_id, chat_id, text, filename=None):
-        new_message = Message(account_id=acc_id, chat_id=chat_id, text=text, filename=filename
-                              , sent_time=datetime.now())
         try:
+            new_message = Message(account_id=acc_id, chat_id=chat_id, text=text, filename=filename
+                                  , sent_time=datetime.now())
             self.session.add(new_message)
             self.session.commit()
             return self.OK, new_message
@@ -186,9 +203,9 @@ class DatabaseController:
             return e, None
 
     def delete_message_from_chat(self, acc_id, chat_id):
-        message = (self.session.query(Message)
-                   .filter(Message.chat_id == chat_id, Message.account_id == acc_id)).first()
         try:
+            message = (self.session.query(Message)
+                       .filter(Message.chat_id == chat_id, Message.account_id == acc_id)).first()
             message.deleted = True
             self.session.commit()
             return self.OK, None
@@ -197,9 +214,9 @@ class DatabaseController:
             return e, None
 
     def update_message(self, acc_id, chat_id, text, filename):
-        message = (self.session.query(Message)
-                   .filter(Message.chat_id == chat_id, Message.account_id == acc_id)).first()
         try:
+            message = (self.session.query(Message)
+                       .filter(Message.chat_id == chat_id, Message.account_id == acc_id)).first()
             message.text = text
             message.filename = filename
             self.session.commit()
@@ -225,6 +242,7 @@ class DatabaseController:
 
             return self.OK, messages, total
         except Exception as e:
+            self.session.rollback()
             return e, None
 
     def test_connection(self):
@@ -233,6 +251,7 @@ class DatabaseController:
             print("Connection successful!")
             return True
         except Exception as e:
+            self.session.rollback()
             print(f"Connection failed: {e}")
             return False
 
